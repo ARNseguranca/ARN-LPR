@@ -64,9 +64,10 @@ window.auth.onAuthStateChanged((user) => {
     if (!currentPath.includes('login') && !currentPath.includes('index.html') && currentPath !== '/') {
       // Está em outra página (cameras, monitoring, etc)
       console.log('[Auth] ⚠ Redirecionando para login');
-      window.location.href = '/login.html';
+      window.location.href = './login.html';
     }
   }
 });
+
 
 console.log('[Config] ✓ Projeto:', firebaseConfig.projectId);
