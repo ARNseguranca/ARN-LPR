@@ -1,10 +1,10 @@
 const CACHE_NAME = 'zecure-v1';
 const ASSETS = [
   '/',
-  '/login.html',
-  '/index.html',
-  '/css/premium.css',
-  '/manifest.json'
+  './login.html',
+  './index.html',
+  './premium.css',
+  './manifest.json'
 ];
 
 self.addEventListener('install', e => {
@@ -39,8 +39,9 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.notification?.title || 'Zecure', {
       body: data.notification?.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/badge-72.png'
+      icon: './icon-192.png',
+      badge: './badge-72.png'
     })
   );
+
 });
