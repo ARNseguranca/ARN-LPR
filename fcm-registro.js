@@ -37,7 +37,7 @@ class FCMManager {
 
       new Notification(title || 'Zecure LPR', {
         body: body || 'Nova notificação',
-        icon: image || '/icons/icon-192.png',
+        icon: image || './icon-192.png',
         badge: '/icons/badge-72.png',
         vibrate: [200, 100, 200],
         tag: 'zecure-notification'
@@ -45,5 +45,6 @@ class FCMManager {
     });
   }
 }
+
 
 const fcmManager = new FCMManager();
