@@ -239,9 +239,9 @@
       function logout(event) {
         if (event) event.preventDefault();
         firebase.auth().signOut().then(() => {
-          window.location.href = '/login.html';
+          window.location.href = './login.html';
         }).catch(() => {
-          window.location.href = '/login.html';
+          window.location.href = './login.html';
         });
       }
 
@@ -687,3 +687,4 @@
 </body>
 
 </html>
+
