@@ -66,7 +66,7 @@
     let allEvents = []; let lastAlertCount = 0;
     const siren = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-    function logout() { firebase.auth().signOut().then(() => location.href='/login.html'); }
+    function logout() { firebase.auth().signOut().then(() => location.href='./login.html'); }
     function openModal(url) { if(!url) return; document.getElementById('modalImg').src=url; document.getElementById('imgModal').classList.add('active'); }
     function closeModal() { document.getElementById('imgModal').classList.remove('active'); }
 
@@ -139,5 +139,6 @@
 </body>
 
 </html>
+
 
 
