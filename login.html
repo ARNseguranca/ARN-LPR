@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#22A2FF"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Zecure"/>
+  <title>Login - Zecure</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #070B14 0%, #0D1326 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #EAF0FF;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #22A2FF, #A64DFF);
+      margin: 0 auto 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    h1 { margin: 0 0 8px 0; font-size: 28px; }
+
+    p {
+      margin: 0;
+      color: #A9B6D3;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 10px;
+      border: 1px solid rgba(27, 42, 82, 0.8);
+      background: rgba(16, 26, 51, 0.6);
+      color: #EAF0FF;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #22A2FF;
+      box-shadow: 0 0 0 3px rgba(34, 162, 255, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #22A2FF, #2E5BFF);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover { opacity: 0.9; }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .error {
+      background: rgba(255, 59, 59, 0.15);
+      border: 1px solid rgba(255, 59, 59, 0.4);
+      color: #FF8080;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 10px 0;
+      font-size: 12px;
+      display: none;
+      text-align: left;
+    }
+
+    .install-card {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(34, 162, 255, 0.16);
+      background: rgba(16, 26, 51, 0.55);
+      text-align: left;
+    }
+
+    .install-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #F3F7FF;
+      margin-bottom: 6px;
+    }
+
+    .install-text {
+      font-size: 12px;
+      color: #A9B6D3;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .install-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .install-actions button {
+      margin: 0;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn-secondary {
+      background: rgba(16, 26, 51, 0.6) !important;
+      color: #A9B6D3 !important;
+      border: 1px solid rgba(169, 182, 211, 0.16) !important;
+    }
+
+    .install-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9FD4FF;
+      line-height: 1.5;
+      display: none;
+    }
+
+    .install-note.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo">🔐</div>
+    <h1>Zecure LPR</h1>
+    <p>Monitoramento de placas em tempo real</p>
+
+    <div class="error" id="errorMsg"></div>
+
+    <button id="btnGoogle" type="button">🔵 Entrar com Google</button>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:20px 0;opacity:0.5">
+      <div style="flex:1;height:1px;background:rgba(169,182,211,.3)"></div>
+      <span style="font-size:12px">OU</span>
+      <div style="flex:1;height:1px;background:rgba(169,182,211,.3)"></div>
+    </div>
+
+    <input id="email" type="email" placeholder="seu@email.com" autocomplete="email"/>
+    <input id="password" type="password" placeholder="Senha" autocomplete="current-password"/>
+    <button id="btnLogin" type="button">Entrar</button>
+    <button id="btnRegister" type="button" style="background:rgba(16,26,51,.6);color:#A9B6D3">Criar conta</button>
+
+    <div class="install-card">
+      <div class="install-title">Instalar aplicativo</div>
+      <div class="install-text">
+        Adicione o Zecure à tela inicial para acesso rápido e uso em modo app.
+      </div>
+
+      <div class="install-actions">
+        <button id="btnInstall" type="button" style="display:none">Instalar app</button>
+        <button id="btnInstallHelp" type="button" class="btn-secondary">Como instalar</button>
+      </div>
+
+      <div id="installNote" class="install-note"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+
+  <script src="/js/firebase-config.js"></script>
+
+  <script>
+    (() => {
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const errorMsg = document.getElementById('errorMsg');
+      const btnGoogle = document.getElementById('btnGoogle');
+      const btnLogin = document.getElementById('btnLogin');
+      const btnRegister = document.getElementById('btnRegister');
+      const btnInstall = document.getElementById('btnInstall');
+      const btnInstallHelp = document.getElementById('btnInstallHelp');
+      const installNote = document.getElementById('installNote');
+
+      let deferredPrompt = null;
+      let authRedirecting = false;
+
+      function showError(message) {
+        errorMsg.textContent = message || 'Falha de autenticação.';
+        errorMsg.style.display = 'block';
+      }
+
+      function clearError() {
+        errorMsg.textContent = '';
+        errorMsg.style.display = 'none';
+      }
+
+      function showInstallNote(message) {
+        installNote.textContent = message;
+        installNote.classList.add('show');
+      }
+
+      function hideInstallNote() {
+        installNote.textContent = '';
+        installNote.classList.remove('show');
+      }
+
+      function setAuthButtonsDisabled(disabled) {
+        btnGoogle.disabled = disabled;
+        btnLogin.disabled = disabled;
+        btnRegister.disabled = disabled;
+      }
+
+      function mapFirebaseError(error) {
+        const code = error && error.code ? error.code : '';
+
+        if (code === 'auth/invalid-email') return 'E-mail inválido.';
+        if (code === 'auth/user-not-found') return 'Usuário não encontrado.';
+        if (code === 'auth/wrong-password') return 'Senha incorreta.';
+        if (code === 'auth/invalid-credential') return 'Credenciais inválidas.';
+        if (code === 'auth/email-already-in-use') return 'Este e-mail já está em uso.';
+        if (code === 'auth/weak-password') return 'A senha precisa ter pelo menos 6 caracteres.';
+        if (code === 'auth/popup-closed-by-user') return 'Login com Google cancelado.';
+        if (code === 'auth/network-request-failed') return 'Falha de rede. Verifique sua conexão.';
+        return error && error.message ? error.message : 'Falha de autenticação.';
+      }
+
+      async function redirectAfterLogin() {
+        if (authRedirecting) return;
+        authRedirecting = true;
+        window.location.href = '/index.html';
+      }
+
+      async function loginWithGoogle() {
+        clearError();
+        setAuthButtonsDisabled(true);
+
+        try {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          await firebase.auth().signInWithPopup(provider);
+          await redirectAfterLogin();
+        } catch (error) {
+          showError(mapFirebaseError(error));
+          setAuthButtonsDisabled(false);
+        }
+      }
+
+      async function loginWithEmail() {
+        clearError();
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+          showError('Preencha e-mail e senha.');
+          return;
+        }
+
+        setAuthButtonsDisabled(true);
+
+        try {
+          await firebase.auth().signInWithEmailAndPassword(email, password);
+          await redirectAfterLogin();
+        } catch (error) {
+          showError(mapFirebaseError(error));
+          setAuthButtonsDisabled(false);
+        }
+      }
+
+      async function registerWithEmail() {
+        clearError();
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+          showError('Preencha e-mail e senha.');
+          return;
+        }
+
+        setAuthButtonsDisabled(true);
+
+        try {
+          await firebase.auth().createUserWithEmailAndPassword(email, password);
+          await redirectAfterLogin();
+        } catch (error) {
+          showError(mapFirebaseError(error));
+          setAuthButtonsDisabled(false);
+        }
+      }
+
+      async function installApp() {
+        if (!deferredPrompt) {
+          showInstallHelp();
+          return;
+        }
+
+        hideInstallNote();
+
+        try {
+          deferredPrompt.prompt();
+          const choiceResult = await deferredPrompt.userChoice;
+
+          if (choiceResult && choiceResult.outcome === 'accepted') {
+            showInstallNote('Aplicativo adicionado com sucesso.');
+          }
+
+          deferredPrompt = null;
+          btnInstall.style.display = 'none';
+        } catch {
+          showInstallNote('Não foi possível abrir a instalação agora.');
+        }
+      }
+
+      function showInstallHelp() {
+        const ua = navigator.userAgent || '';
+        const isIOS = /iphone|ipad|ipod/i.test(ua);
+        const isAndroid = /android/i.test(ua);
+
+        if (isIOS) {
+          showInstallNote('No Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".');
+          return;
+        }
+
+        if (isAndroid) {
+          showInstallNote('No Android, abra o menu do navegador e toque em "Instalar app" ou "Adicionar à tela inicial".');
+          return;
+        }
+
+        showInstallNote('No computador, use o ícone de instalação na barra de endereço do navegador.');
+      }
+
+      btnGoogle.addEventListener('click', loginWithGoogle);
+      btnLogin.addEventListener('click', loginWithEmail);
+      btnRegister.addEventListener('click', registerWithEmail);
+      btnInstall.addEventListener('click', installApp);
+      btnInstallHelp.addEventListener('click', showInstallHelp);
+
+      emailInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') loginWithEmail();
+      });
+
+      passwordInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') loginWithEmail();
+      });
+
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredPrompt = event;
+        btnInstall.style.display = 'block';
+        showInstallNote('Este dispositivo já pode instalar o Zecure como aplicativo.');
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        btnInstall.style.display = 'none';
+        showInstallNote('Aplicativo instalado com sucesso.');
+      });
+
+      firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+          redirectAfterLogin();
+        } else {
+          authRedirecting = false;
+          setAuthButtonsDisabled(false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

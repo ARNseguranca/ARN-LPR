@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#22A2FF"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <title>Configurações - Zecure</title>
+  <link rel="stylesheet" href="/css/premium.css"/>
+  
+  <!-- FIREBASE CDN COMPAT - UMA VEZ -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+  
+  <!-- CONFIG GLOBAL -->
+  <script src="/js/firebase-config.js"></script>
+</head>
+<body style="display:none">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge"></div>
+        <div>
+          <h1>LPR • Zecure</h1>
+          <p id="userEmail">—</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="/">▣ Dashboard</a>
+        <a href="/cameras.html">📷 Câmeras</a>
+        <a href="/monitoring.html">◎ Monitoramento</a>
+        <a href="/reports.html">≋ Relatórios</a>
+        <a class="active" href="/config.html">⚙ Configurações</a>
+        <a href="#" onclick="logout()">🚪 Sair</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Configurações</h2>
+          <div class="subtle">Integração Helios • Sistema</div>
+        </div>
+      </header>
+
+      <div class="card pad">
+        <h3>Integração Helios</h3>
+        <p style="margin:0 0 16px 0;font-size:12px;color:rgba(169,182,211,.9)">Conecte seu servidor Helios para sincronização bidirecional de eventos</p>
+        
+        <div style="max-width:600px">
+          <div style="margin:16px 0">
+            <label style="display:block;font-size:11px;font-weight:600;margin-bottom:8px;color:rgba(234,240,255,.95)">URL do servidor *</label>
+            <input id="heliosUrl" class="input" type="url" placeholder="https://helios.example.com/api" style="margin:0"/>
+            <div style="font-size:10px;margin-top:4px;color:rgba(169,182,211,.8)">Endpoint completo da API Helios</div>
+          </div>
+
+          <div style="margin:16px 0">
+            <label style="display:block;font-size:11px;font-weight:600;margin-bottom:8px;color:rgba(234,240,255,.95)">Token de autenticação *</label>
+            <div style="display:flex;gap:8px">
+              <input id="heliosToken" class="input" type="password" placeholder="••••••••••••••" style="margin:0"/>
+              <button onclick="togglePassword()" class="btn" style="padding:10px 12px;font-size:11px;white-space:nowrap">👁 Ver</button>
+            </div>
+            <div style="font-size:10px;margin-top:4px;color:rgba(169,182,211,.8)">Chave de API fornecida pelo servidor Helios</div>
+          </div>
+
+          <div id="configStatus" style="margin:16px 0;padding:12px;border-radius:10px;border:1px solid rgba(27,42,82,.75);background:rgba(16,26,51,.35);color:rgba(169,182,211,.9);font-size:12px;display:none;border-left:3px solid rgba(34,211,182,.6)"></div>
+
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button onclick="saveConfig()" class="btn primary" style="flex:1;min-width:120px">💾 Salvar</button>
+            <button onclick="testConnection()" class="btn" style="flex:1;min-width:120px">🔗 Testar</button>
+            <button onclick="clearConfig()" class="btn danger" style="flex:1;min-width:120px">🗑 Limpar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pad" style="margin-top:16px">
+        <h3>Sistema</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+          <div>
+            <div style="font-size:11px;color:rgba(169,182,211,.9);font-weight:600">Versão</div>
+            <div style="font-size:14px;font-weight:700;margin-top:6px;color:#22A2FF">v1.0.0</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:rgba(169,182,211,.9);font-weight:600">Status</div>
+            <div id="pwaStatus" style="font-size:14px;font-weight:700;margin-top:6px;color:#34D399">✓ Online</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:rgba(169,182,211,.9);font-weight:600">Banco de Dados</div>
+            <div style="font-size:12px;margin-top:6px;color:rgba(169,182,211,.95)">lpr-arn</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:rgba(169,182,211,.9);font-weight:600">Usuário</div>
+            <div id="userInfo" style="font-size:11px;margin-top:6px;color:rgba(169,182,211,.95)">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pad" style="margin-top:16px">
+        <h3>Desenvolvido por:</h3>
+        <div id="heliosStatus" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:12px">
+          <div style="padding:12px;border-radius:10px;border:1px solid rgba(27,42,82,.65);background:rgba(16,26,51,.35)">
+            <div style="font-size:10px;color:rgba(169,182,211,.8)">Zecure Soluções em Segurança</div>
+            <div id="lastSync" style="font-size:12px;margin-top:4px;color:rgba(234,240,255,.9)">—</div>
+          </div>
+          <div style="padding:12px;border-radius:10px;border:1px solid rgba(27,42,82,.65);background:rgba(16,26,51,.35)">
+            <div style="font-size:10px;color:rgba(169,182,211,.8)"></div>
+            <div id="connStatus" style="font-size:12px;margin-top:4px;color:rgba(169,182,211,.95)"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- APP LOGIC -->
+  <script>
+    let showPassword = false;
+    let configLoaded = false;
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        window.location.href = '/login.html';
+      });
+    }
+
+    function togglePassword() {
+      showPassword = !showPassword;
+      const input = document.getElementById('heliosToken');
+      input.type = showPassword ? 'text' : 'password';
+      event.target.textContent = showPassword ? '🙈 Ocultar' : '👁 Ver';
+    }
+
+    function showStatus(msg, type = 'info') {
+      const el = document.getElementById('configStatus');
+      el.textContent = msg;
+      el.style.display = 'block';
+      
+      el.style.borderLeftColor = 
+        type === 'ok' ? 'rgba(52,211,153,.6)' :
+        type === 'error' ? 'rgba(255,59,59,.6)' :
+        type === 'warning' ? 'rgba(255,176,32,.6)' :
+        'rgba(34,162,255,.6)';
+      
+      if (type === 'ok') el.style.color = '#34D399';
+      if (type === 'error') el.style.color = '#FF3B3B';
+      if (type === 'warning') el.style.color = '#FFB020';
+      if (type === 'info') el.style.color = 'rgba(169,182,211,.9)';
+    }
+
+    function hideStatus() {
+      document.getElementById('configStatus').style.display = 'none';
+    }
+
+    async function loadConfig() {
+      try {
+        if (!window.db) {
+          console.warn('[Config] Firebase não pronto');
+          return;
+        }
+
+        const doc = await window.db.collection('config').doc('helios').get();
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById('heliosUrl').value = data.helios_url || '';
+          document.getElementById('heliosToken').value = data.helios_token || '';
+          
+          const lastUpdate = data.updatedAt?.toDate();
+          if (lastUpdate) {
+            document.getElementById('lastSync').textContent = lastUpdate.toLocaleString('pt-BR');
+            document.getElementById('connStatus').textContent = '✓ Configurado';
+            document.getElementById('connStatus').style.color = '#34D399';
+          }
+          
+          configLoaded = true;
+          console.log('[Config] Carregado com sucesso');
+        } else {
+          document.getElementById('connStatus').textContent = 'Não configurado';
+          console.log('[Config] Documento não encontrado');
+        }
+      } catch (e) {
+        console.error('[Config] Erro ao carregar:', e);
+        showStatus('Erro ao carregar configurações: ' + e.message, 'error');
+      }
+    }
+
+    async function saveConfig() {
+      const url = document.getElementById('heliosUrl').value.trim();
+      const token = document.getElementById('heliosToken').value.trim();
+
+      if (!url || !token) {
+        showStatus('⚠ Preencha URL e token', 'warning');
+        return;
+      }
+
+      if (!url.startsWith('http')) {
+        showStatus('⚠ URL inválida (deve começar com http:// ou https://)', 'warning');
+        return;
+      }
+
+      try {
+        showStatus('⏳ Salvando...', 'info');
+        
+        await window.db.collection('config').doc('helios').set({
+          helios_url: url,
+          helios_token: token,
+          updatedAt: new Date(),
+          status: 'pending_test'
+        });
+
+        showStatus('✓ Configurações salvas com sucesso', 'ok');
+        document.getElementById('connStatus').textContent = 'Configurado (teste pendente)';
+        document.getElementById('lastSync').textContent = new Date().toLocaleString('pt-BR');
+        
+        console.log('[Config] Salvo com sucesso');
+      } catch (e) {
+        showStatus('✗ Erro ao salvar: ' + e.message, 'error');
+        console.error('[Config] Erro:', e);
+      }
+    }
+
+    async function testConnection() {
+      const url = document.getElementById('heliosUrl').value.trim();
+      const token = document.getElementById('heliosToken').value.trim();
+
+      if (!url || !token) {
+        showStatus('⚠ Configure URL e token primeiro', 'warning');
+        return;
+      }
+
+      try {
+        showStatus('⏳ Testando conexão com Helios...', 'info');
+
+        // Teste simples (substitua pela chamada real da sua API)
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          showStatus('✓ Conexão OK com Helios', 'ok');
+          
+          await window.db.collection('config').doc('helios').update({
+            lastTestTime: new Date(),
+            testStatus: 'success'
+          });
+          
+          document.getElementById('connStatus').textContent = '✓ Conectado';
+          document.getElementById('connStatus').style.color = '#34D399';
+        } else {
+          showStatus('⚠ Helios respondeu com erro: ' + response.status, 'warning');
+          document.getElementById('connStatus').textContent = 'Erro na conexão';
+          document.getElementById('connStatus').style.color = '#FFB020';
+        }
+      } catch (e) {
+        showStatus('✗ Erro de conexão: ' + e.message, 'error');
+        document.getElementById('connStatus').textContent = 'Desconectado';
+        document.getElementById('connStatus').style.color = '#FF3B3B';
+        console.error('[Helios] Erro:', e);
+      }
+    }
+
+    async function clearConfig() {
+      if (!confirm('Tem certeza que deseja limpar as configurações Helios?')) return;
+
+      try {
+        showStatus('⏳ Limpando...', 'info');
+        
+        await window.db.collection('config').doc('helios').delete();
+        
+        document.getElementById('heliosUrl').value = '';
+        document.getElementById('heliosToken').value = '';
+        document.getElementById('connStatus').textContent = 'Não configurado';
+        document.getElementById('lastSync').textContent = '—';
+        
+        showStatus('✓ Configurações limpas', 'ok');
+        console.log('[Config] Limpado');
+      } catch (e) {
+        showStatus('✗ Erro ao limpar: ' + e.message, 'error');
+        console.error('[Config] Erro:', e);
+      }
+    }
+
+    async function init() {
+      if (!window.db || !window.auth) {
+        setTimeout(init, 300);
+        return;
+      }
+
+      const user = window.auth.currentUser;
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      document.getElementById('userEmail').textContent = user.email;
+      document.getElementById('userInfo').textContent = user.email;
+      document.body.style.display = 'block';
+
+      console.log('[Init] Config carregado para:', user.email);
+
+      await loadConfig();
+    }
+
+    firebase.auth().onAuthStateChanged(() => {
+      init();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#22A2FF"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <title>Monitoramento - Zecure</title>
+  <link rel="stylesheet" href="/css/premium.css"/>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+
+  <script src="/js/firebase-config.js"></script>
+  <script src="/js/fcm-registro.js"></script>
+  <script src="/js/firestore-sync.js"></script>
+
+  <style>
+    .page-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .toolbar-left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .search-box{min-width:260px;flex:1}
+    .stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:18px}
+    .stat-card{background:linear-gradient(180deg,rgba(22,26,51,.88),rgba(16,26,51,.82));border:1px solid rgba(38,56,98,.7);border-radius:18px;padding:16px 18px}
+    .stat-label{font-size:11px;color:rgba(169,182,211,.82);text-transform:uppercase;letter-spacing:.05em}
+    .stat-value{font-size:28px;font-weight:800;color:#F5F9FF;margin-top:8px;line-height:1}
+    .stat-help{font-size:11px;color:rgba(169,182,211,.72);margin-top:8px}
+    .plate-table-wrap{margin-top:18px;overflow:auto;border-radius:16px;border:1px solid rgba(38,56,98,.55)}
+    .plate-cell-main{font-weight:800;color:#F2F7FF;letter-spacing:.05em}
+    .plate-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid transparent}
+    .plate-badge.active{background:rgba(34,211,153,.12);color:#34D399;border-color:rgba(52,211,153,.24)}
+    .plate-badge.inactive{background:rgba(255,59,59,.10);color:#FF7D7D;border-color:rgba(255,59,59,.18)}
+    .inline-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;background:rgba(34,162,255,.08);border:1px solid rgba(34,162,255,.18);font-size:11px;color:#9FD4FF}
+    .modal{width:min(620px,calc(100vw - 24px))}
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .helper-text{font-size:11px;color:rgba(169,182,211,.72);margin-top:6px}
+    .empty-state{padding:42px 24px;text-align:center;border:1px dashed rgba(85,110,168,.45);border-radius:18px;background:rgba(16,26,51,.38);color:rgba(169,182,211,.82);margin-top:18px}
+    .empty-state strong{display:block;color:#F4F7FB;font-size:16px;margin-bottom:8px}
+    .danger-outline{background:transparent;border:1px solid rgba(255,59,59,.28)!important;color:#FF8585!important}
+    .danger-outline:hover{background:rgba(255,59,59,.10)!important}
+    .soft-warning{color:#FFB86B}
+    @media (max-width: 900px){
+      .stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .field-grid{grid-template-columns:1fr}
+    }
+    @media (max-width: 640px){
+      .stats-row{grid-template-columns:1fr}
+      .page-toolbar{align-items:stretch}
+      .toolbar-left,.toolbar-right{width:100%}
+      .search-box{width:100%}
+    }
+  </style>
+</head>
+<body style="display:none">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge"></div>
+        <div>
+          <h1>LPR • Zecure</h1>
+          <p id="userEmail">—</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="/">▣ Dashboard</a>
+        <a href="/cameras.html">📷 Câmeras</a>
+        <a class="active" href="/monitoring.html">◎ Monitoramento</a>
+        <a href="/reports.html">≋ Relatórios</a>
+        <a href="/config.html">⚙ Configurações</a>
+        <a href="#" id="logoutLink">🚪 Sair</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Placas monitoradas</h2>
+          <div class="subtle">Cadastro operacional para geração de alertas e correlação LPR</div>
+        </div>
+        <div class="right">
+          <button id="connectionPill" class="pill">Conectando…</button>
+        </div>
+      </header>
+
+      <section class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Placas ativas</div>
+          <div id="statActive" class="stat-value">0</div>
+          <div class="stat-help">Geram alertas quando detectadas</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Placas inativas</div>
+          <div id="statInactive" class="stat-value">0</div>
+          <div class="stat-help">Mantidas na base, sem alerta</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Total cadastrado</div>
+          <div id="statTotal" class="stat-value">0</div>
+          <div class="stat-help">Base integral da collection monitoring</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Descrições preenchidas</div>
+          <div id="statDescribed" class="stat-value">0</div>
+          <div class="stat-help">Qualidade cadastral operacional</div>
+        </div>
+      </section>
+
+      <div class="card pad" style="margin-top:18px">
+        <div class="page-toolbar">
+          <div class="toolbar-left">
+            <div>
+              <h3 style="margin:0">Placas em monitoramento (<span id="plateCount">0</span>)</h3>
+              <div class="subtle" style="margin-top:6px">Ativação lógica, busca local e edição em tempo real</div>
+            </div>
+            <span id="lastSyncChip" class="inline-chip">Sincronização em tempo real</span>
+          </div>
+
+          <div class="toolbar-right">
+            <input id="searchInput" class="input search-box" placeholder="Buscar por placa ou descrição"/>
+            <button id="btnAdd" class="btn primary" type="button">+ Nova placa</button>
+          </div>
+        </div>
+
+        <div class="plate-table-wrap">
+          <table class="table" style="margin-top:0">
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Descrição</th>
+                <th>Status</th>
+                <th>Atualização</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="platesList">
+              <tr><td colspan="5" class="subtle">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-backdrop" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nova placa</h3>
+        <button id="btnCloseModalTop" class="btn" type="button">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding:20px">
+        <div class="field-grid">
+          <div style="margin:10px 0">
+            <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Placa *</label>
+            <input id="platePlate" class="input" placeholder="ABC1234" style="margin:0;text-transform:uppercase" maxlength="8" autocomplete="off"/>
+            <div class="helper-text">Formato aceito: ABC1234 ou ABC1D23. O sistema salva sem hífen e sem espaços.</div>
+          </div>
+
+          <div style="margin:10px 0">
+            <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Status</label>
+            <label style="margin:12px 0 0 0;display:flex;gap:10px;align-items:center;font-size:12px">
+              <input id="plateActive" type="checkbox" checked/>
+              <span>Placa ativa</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin:10px 0">
+          <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Descrição</label>
+          <textarea id="plateDesc" class="input" placeholder="Ex: Veículo de interesse, morador, fornecedor, restrição operacional..." style="margin:0;resize:vertical;height:100px" maxlength="500"></textarea>
+        </div>
+
+        <div id="modalError" style="margin:12px 0;padding:10px 12px;border-radius:10px;background:rgba(255,59,59,.15);color:#FF9090;font-size:12px;display:none;border:1px solid rgba(255,59,59,.28)"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btnCloseModalBottom" class="btn" type="button">Cancelar</button>
+        <button id="btnSave" class="btn primary" type="button">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      let editingId = null;
+      let unsubscribeMonitoring = null;
+      let allPlates = [];
+      let isBootstrapped = false;
+      let isBindingsReady = false;
+      let isSaving = false;
+
+      const state = {
+        authResolved: false,
+        currentUserUid: null
+      };
+
+      const els = {
+        body: document.body,
+        userEmail: document.getElementById('userEmail'),
+        connectionPill: document.getElementById('connectionPill'),
+        statActive: document.getElementById('statActive'),
+        statInactive: document.getElementById('statInactive'),
+        statTotal: document.getElementById('statTotal'),
+        statDescribed: document.getElementById('statDescribed'),
+        plateCount: document.getElementById('plateCount'),
+        lastSyncChip: document.getElementById('lastSyncChip'),
+        searchInput: document.getElementById('searchInput'),
+        btnAdd: document.getElementById('btnAdd'),
+        btnSave: document.getElementById('btnSave'),
+        btnCloseModalTop: document.getElementById('btnCloseModalTop'),
+        btnCloseModalBottom: document.getElementById('btnCloseModalBottom'),
+        logoutLink: document.getElementById('logoutLink'),
+        platesList: document.getElementById('platesList'),
+        modal: document.getElementById('modal'),
+        modalTitle: document.getElementById('modalTitle'),
+        platePlate: document.getElementById('platePlate'),
+        plateDesc: document.getElementById('plateDesc'),
+        plateActive: document.getElementById('plateActive'),
+        modalError: document.getElementById('modalError')
+      };
+
+      function setConnectionState(text, isOnline) {
+        els.connectionPill.textContent = text;
+        if (isOnline) {
+          els.connectionPill.style.background = 'linear-gradient(135deg, rgba(34, 211, 182, 0.15), rgba(52, 211, 153, 0.1))';
+          els.connectionPill.style.color = '#34D399';
+        } else {
+          els.connectionPill.style.background = '';
+          els.connectionPill.style.color = '';
+        }
+      }
+
+      function logout(event) {
+        if (event) event.preventDefault();
+        firebase.auth().signOut().then(() => {
+          window.location.href = '/login.html';
+        }).catch(() => {
+          window.location.href = '/login.html';
+        });
+      }
+
+      function showError(msg) {
+        els.modalError.textContent = msg || 'Erro operacional.';
+        els.modalError.style.display = 'block';
+      }
+
+      function clearError() {
+        els.modalError.textContent = '';
+        els.modalError.style.display = 'none';
+      }
+
+      function normalizePlate(value) {
+        return String(value || '')
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '');
+      }
+
+      function isValidPlate(value) {
+        const plate = normalizePlate(value);
+        if (!/^[A-Z0-9]{7}$/.test(plate)) return false;
+        const oldPattern = /^[A-Z]{3}[0-9]{4}$/;
+        const mercosulPattern = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
+        return oldPattern.test(plate) || mercosulPattern.test(plate);
+      }
+
+      function normalizeText(value) {
+        return typeof value === 'string' ? value.trim() : '';
+      }
+
+      function normalizeRecord(record) {
+        const plate = normalizePlate(record.plate || record.plate_normalized || '');
+        const description = normalizeText(record.description);
+        return {
+          id: record.id,
+          plate,
+          plate_normalized: plate,
+          description,
+          is_active: record.is_active === true || record.isActive === true,
+          createdAt: record.createdAt || null,
+          updatedAt: record.updatedAt || null,
+          deletedAt: record.deletedAt || null
+        };
+      }
+
+      function formatDateTime(dateValue) {
+        if (!dateValue) return '—';
+        try {
+          if (typeof dateValue.toDate === 'function') {
+            return dateValue.toDate().toLocaleString('pt-BR');
+          }
+          const date = new Date(dateValue);
+          if (Number.isNaN(date.getTime())) return '—';
+          return date.toLocaleString('pt-BR');
+        } catch {
+          return '—';
+        }
+      }
+
+      function updateStats(plates) {
+        const total = plates.length;
+        const active = plates.filter(p => p.is_active).length;
+        const inactive = total - active;
+        const described = plates.filter(p => p.description.length > 0).length;
+
+        els.statTotal.textContent = String(total);
+        els.statActive.textContent = String(active);
+        els.statInactive.textContent = String(inactive);
+        els.statDescribed.textContent = String(described);
+      }
+
+      function getFilteredPlates() {
+        const term = normalizeText(els.searchInput.value).toLowerCase();
+        if (!term) return allPlates.slice();
+
+        return allPlates.filter(item => {
+          const plate = (item.plate || '').toLowerCase();
+          const description = (item.description || '').toLowerCase();
+          return plate.includes(term) || description.includes(term);
+        });
+      }
+
+      function comparePlates(a, b) {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        return (a.plate || '').localeCompare(b.plate || '', 'pt-BR');
+      }
+
+      function createCellText(text, className) {
+        const td = document.createElement('td');
+        if (className) td.className = className;
+        td.textContent = text;
+        return td;
+      }
+
+      function createDescriptionCell(description) {
+        const td = document.createElement('td');
+        if (description) {
+          td.textContent = description;
+        } else {
+          const span = document.createElement('span');
+          span.className = 'subtle';
+          span.textContent = 'Sem descrição';
+          td.appendChild(span);
+        }
+        return td;
+      }
+
+      function createStatusCell(isActive) {
+        const td = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = 'plate-badge ' + (isActive ? 'active' : 'inactive');
+        badge.textContent = isActive ? 'Ativa' : 'Inativa';
+        td.appendChild(badge);
+        return td;
+      }
+
+      function createActionsCell(plate) {
+        const td = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.style.display = 'flex';
+        wrap.style.gap = '8px';
+        wrap.style.flexWrap = 'wrap';
+
+        const btnEdit = document.createElement('button');
+        btnEdit.type = 'button';
+        btnEdit.className = 'btn';
+        btnEdit.style.padding = '8px 10px';
+        btnEdit.style.fontSize = '11px';
+        btnEdit.textContent = 'Editar';
+        btnEdit.addEventListener('click', () => {
+          editPlate(plate.id);
+        });
+
+        const btnToggle = document.createElement('button');
+        btnToggle.type = 'button';
+        btnToggle.className = 'btn' + (plate.is_active ? ' danger-outline' : '');
+        btnToggle.style.padding = '8px 10px';
+        btnToggle.style.fontSize = '11px';
+        btnToggle.textContent = plate.is_active ? 'Desativar' : 'Reativar';
+        btnToggle.addEventListener('click', () => {
+          togglePlateStatus(plate.id, !plate.is_active);
+        });
+
+        wrap.appendChild(btnEdit);
+        wrap.appendChild(btnToggle);
+        td.appendChild(wrap);
+        return td;
+      }
+
+      function renderEmptyRow(message, isWarning) {
+        els.platesList.textContent = '';
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.className = isWarning ? 'soft-warning' : 'subtle';
+        td.textContent = message;
+        tr.appendChild(td);
+        els.platesList.appendChild(tr);
+      }
+
+      function renderPlates(plates) {
+        els.platesList.textContent = '';
+        els.plateCount.textContent = String(plates.length);
+
+        if (!plates.length) {
+          renderEmptyRow('Nenhuma placa encontrada', false);
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        plates
+          .slice()
+          .sort(comparePlates)
+          .forEach(p => {
+            const tr = document.createElement('tr');
+            tr.appendChild(createCellText(p.plate || '—', 'plate-cell-main'));
+            tr.appendChild(createDescriptionCell(p.description));
+            tr.appendChild(createStatusCell(p.is_active));
+            tr.appendChild(createCellText(formatDateTime(p.updatedAt || p.createdAt), ''));
+            tr.appendChild(createActionsCell(p));
+            fragment.appendChild(tr);
+          });
+
+        els.platesList.appendChild(fragment);
+      }
+
+      function refreshView() {
+        updateStats(allPlates);
+        renderPlates(getFilteredPlates());
+      }
+
+      function setModalOpen(isOpen) {
+        els.modal.style.display = isOpen ? 'flex' : 'none';
+      }
+
+      function resetModalFields() {
+        els.platePlate.value = '';
+        els.plateDesc.value = '';
+        els.plateActive.checked = true;
+      }
+
+      function openModal(id = null) {
+        clearError();
+        editingId = id;
+        resetModalFields();
+        els.modalTitle.textContent = id ? 'Editar placa' : 'Nova placa';
+        setModalOpen(true);
+
+        if (!id) return;
+
+        const localRecord = allPlates.find(item => item.id === id);
+        if (localRecord) {
+          els.platePlate.value = localRecord.plate || '';
+          els.plateDesc.value = localRecord.description || '';
+          els.plateActive.checked = localRecord.is_active === true;
+          return;
+        }
+
+        window.db.collection('monitoring').doc(id).get().then(doc => {
+          if (!doc.exists) {
+            showError('Registro não encontrado.');
+            return;
+          }
+
+          const p = normalizeRecord({ id: doc.id, ...doc.data() });
+          els.platePlate.value = p.plate || '';
+          els.plateDesc.value = p.description || '';
+          els.plateActive.checked = p.is_active;
+        }).catch(err => {
+          showError('Erro ao carregar registro: ' + (err && err.message ? err.message : 'falha de leitura.'));
+        });
+      }
+
+      function closeModal() {
+        setModalOpen(false);
+        clearError();
+        editingId = null;
+        isSaving = false;
+        els.btnSave.disabled = false;
+      }
+
+      async function findDuplicateByPlateNormalized(plateNormalized) {
+        const snapshot = await window.db
+          .collection('monitoring')
+          .where('plate_normalized', '==', plateNormalized)
+          .limit(5)
+          .get();
+
+        if (snapshot.empty) return null;
+
+        const duplicateDoc = snapshot.docs.find(doc => doc.id !== editingId);
+        return duplicateDoc || null;
+      }
+
+      async function savePlate() {
+        if (isSaving) return;
+
+        clearError();
+
+        const plate = normalizePlate(els.platePlate.value);
+        const description = normalizeText(els.plateDesc.value);
+        const active = els.plateActive.checked;
+
+        if (!plate) {
+          showError('Informe a placa.');
+          return;
+        }
+
+        if (plate.length !== 7) {
+          showError('Placa inválida. Use exatamente 7 caracteres alfanuméricos.');
+          return;
+        }
+
+        if (!isValidPlate(plate)) {
+          showError('Formato inválido. Use padrão antigo ou Mercosul.');
+          return;
+        }
+
+        const localDuplicate = allPlates.find(item =>
+          item.id !== editingId &&
+          item.plate_normalized === plate
+        );
+
+        if (localDuplicate) {
+          showError('Esta placa já está cadastrada no monitoramento.');
+          return;
+        }
+
+        isSaving = true;
+        els.btnSave.disabled = true;
+
+        try {
+          const remoteDuplicate = await findDuplicateByPlateNormalized(plate);
+          if (remoteDuplicate) {
+            showError('Esta placa já está cadastrada no monitoramento.');
+            isSaving = false;
+            els.btnSave.disabled = false;
+            return;
+          }
+
+          const payload = {
+            plate,
+            plate_normalized: plate,
+            description,
+            is_active: active,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+
+          if (editingId) {
+            await window.db.collection('monitoring').doc(editingId).update(payload);
+          } else {
+            await window.db.collection('monitoring').add({
+              ...payload,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              deletedAt: null
+            });
+          }
+
+          closeModal();
+        } catch (e) {
+          showError('Erro ao salvar: ' + (e && e.message ? e.message : 'falha operacional.'));
+          isSaving = false;
+          els.btnSave.disabled = false;
+        }
+      }
+
+      function editPlate(id) {
+        openModal(id);
+      }
+
+      async function togglePlateStatus(id, nextStatus) {
+        const actionText = nextStatus ? 'reativar' : 'desativar';
+        const confirmed = window.confirm(`Tem certeza que deseja ${actionText} esta placa?`);
+        if (!confirmed) return;
+
+        try {
+          await window.db.collection('monitoring').doc(id).update({
+            is_active: nextStatus,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            deletedAt: nextStatus ? null : firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (e) {
+          window.alert('Erro ao alterar status: ' + (e && e.message ? e.message : 'falha operacional.'));
+        }
+      }
+
+      function detachMonitoringListener() {
+        if (typeof unsubscribeMonitoring === 'function') {
+          unsubscribeMonitoring();
+          unsubscribeMonitoring = null;
+        }
+      }
+
+      function subscribeMonitoring() {
+        if (unsubscribeMonitoring) return;
+
+        unsubscribeMonitoring = window.db.collection('monitoring').onSnapshot(snap => {
+          allPlates = snap.docs.map(d => normalizeRecord({ id: d.id, ...d.data() }));
+          refreshView();
+          els.lastSyncChip.textContent = 'Sincronização em tempo real';
+          setConnectionState('✓ Conectado', true);
+        }, err => {
+          detachMonitoringListener();
+          renderEmptyRow('Erro ao carregar: ' + (err && err.message ? err.message : 'falha de sincronização.'), true);
+          els.lastSyncChip.textContent = 'Falha de sincronização';
+          setConnectionState('Sem conexão', false);
+        });
+      }
+
+      function bindEventsOnce() {
+        if (isBindingsReady) return;
+        isBindingsReady = true;
+
+        els.logoutLink.addEventListener('click', logout);
+        els.btnAdd.addEventListener('click', () => openModal());
+        els.btnSave.addEventListener('click', savePlate);
+        els.btnCloseModalTop.addEventListener('click', closeModal);
+        els.btnCloseModalBottom.addEventListener('click', closeModal);
+        els.searchInput.addEventListener('input', refreshView);
+
+        els.platePlate.addEventListener('input', event => {
+          const normalized = normalizePlate(event.target.value);
+          event.target.value = normalized;
+        });
+
+        els.modal.addEventListener('click', event => {
+          if (event.target === els.modal) closeModal();
+        });
+
+        document.addEventListener('keydown', event => {
+          if (event.key === 'Escape' && els.modal.style.display === 'flex') {
+            closeModal();
+          }
+        });
+
+        window.addEventListener('beforeunload', () => {
+          detachMonitoringListener();
+        });
+      }
+
+      function initForAuthenticatedUser(user) {
+        if (!user) {
+          detachMonitoringListener();
+          state.currentUserUid = null;
+          window.location.href = '/login.html';
+          return;
+        }
+
+        if (state.currentUserUid === user.uid && unsubscribeMonitoring) {
+          els.userEmail.textContent = user.email || '—';
+          els.body.style.display = 'block';
+          setConnectionState('✓ Conectado', true);
+          return;
+        }
+
+        state.currentUserUid = user.uid;
+        els.userEmail.textContent = user.email || '—';
+        els.body.style.display = 'block';
+        setConnectionState('Conectando…', false);
+        subscribeMonitoring();
+      }
+
+      function boot() {
+        if (isBootstrapped) return;
+        if (!window.db || !window.auth || !window.firebase) {
+          window.setTimeout(boot, 300);
+          return;
+        }
+
+        isBootstrapped = true;
+        bindEventsOnce();
+
+        firebase.auth().onAuthStateChanged(user => {
+          state.authResolved = true;
+          initForAuthenticatedUser(user);
+        });
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

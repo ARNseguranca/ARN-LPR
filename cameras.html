@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#22A2FF"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <title>Câmeras - Zecure</title>
+  <link rel="stylesheet" href="/css/premium.css"/>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+
+  <style>
+    .page-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .toolbar-left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .toolbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .search-box{min-width:260px;flex:1}
+    .camera-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;margin-top:18px}
+    .camera-card{background:linear-gradient(180deg,rgba(22,26,51,.92),rgba(16,26,51,.86));border:1px solid rgba(38,56,98,.7);border-radius:18px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.18);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+    .camera-card:hover{transform:translateY(-2px);border-color:rgba(34,162,255,.55);box-shadow:0 12px 34px rgba(0,0,0,.24)}
+    .camera-card-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+    .camera-title{margin:0;font-size:16px;line-height:1.3;color:#F4F7FB}
+    .camera-subtitle{margin:4px 0 0 0;font-size:11px;color:rgba(169,182,211,.78)}
+    .camera-status{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid transparent;white-space:nowrap}
+    .camera-status.active{background:rgba(34,211,153,.12);color:#34D399;border-color:rgba(52,211,153,.24)}
+    .camera-status.inactive{background:rgba(255,59,59,.10);color:#FF6B6B;border-color:rgba(255,59,59,.18)}
+    .camera-data{display:grid;gap:10px;margin-bottom:14px}
+    .data-row{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:start}
+    .data-label{font-size:11px;color:rgba(169,182,211,.82);text-transform:uppercase;letter-spacing:.05em}
+    .data-value{font-size:12px;color:#E8EDF7;word-break:break-word}
+    .data-code{display:inline-block;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.06);padding:6px 8px;border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#DCE7FF}
+    .camera-actions{display:flex;gap:10px;margin-top:14px}
+    .camera-actions .btn{flex:1;padding:10px 12px;font-size:12px}
+    .stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:18px}
+    .stat-card{background:linear-gradient(180deg,rgba(22,26,51,.88),rgba(16,26,51,.82));border:1px solid rgba(38,56,98,.7);border-radius:18px;padding:16px 18px}
+    .stat-label{font-size:11px;color:rgba(169,182,211,.82);text-transform:uppercase;letter-spacing:.05em}
+    .stat-value{font-size:28px;font-weight:800;color:#F5F9FF;margin-top:8px;line-height:1}
+    .stat-help{font-size:11px;color:rgba(169,182,211,.72);margin-top:8px}
+    .empty-state{padding:42px 24px;text-align:center;border:1px dashed rgba(85,110,168,.45);border-radius:18px;background:rgba(16,26,51,.38);color:rgba(169,182,211,.82)}
+    .empty-state strong{display:block;color:#F4F7FB;font-size:16px;margin-bottom:8px}
+    .page-section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .inline-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;background:rgba(34,162,255,.08);border:1px solid rgba(34,162,255,.18);font-size:11px;color:#9FD4FF}
+    .modal{width:min(560px,calc(100vw - 24px))}
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .helper-text{font-size:11px;color:rgba(169,182,211,.72);margin-top:6px}
+    .soft-danger{color:#FF7E7E}
+    .danger-outline{background:transparent;border:1px solid rgba(255,59,59,.28)!important;color:#FF8585!important}
+    .danger-outline:hover{background:rgba(255,59,59,.10)!important}
+    @media (max-width: 900px){
+      .stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .field-grid{grid-template-columns:1fr}
+    }
+    @media (max-width: 640px){
+      .stats-row{grid-template-columns:1fr}
+      .camera-grid{grid-template-columns:1fr}
+      .page-toolbar{align-items:stretch}
+      .toolbar-right,.toolbar-left{width:100%}
+      .search-box{width:100%}
+    }
+  </style>
+</head>
+<body style="display:none">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge"></div>
+        <div>
+          <h1>LPR • Zecure</h1>
+          <p id="userEmail">—</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="/">▣ Dashboard</a>
+        <a class="active" href="/cameras.html">📷 Câmeras</a>
+        <a href="/monitoring.html">◎ Monitoramento</a>
+        <a href="/reports.html">≋ Relatórios</a>
+        <a href="/config.html">⚙ Configurações</a>
+        <a href="#" onclick="logout()">🚪 Sair</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Câmeras</h2>
+          <div class="subtle">Cadastro operacional, status lógico e gestão dos endpoints</div>
+        </div>
+        <div class="right">
+          <button id="connectionPill" class="pill">Conectando…</button>
+        </div>
+      </header>
+
+      <section class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Câmeras ativas</div>
+          <div id="statActive" class="stat-value">0</div>
+          <div class="stat-help">Em operação lógica no aplicativo</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Câmeras inativas</div>
+          <div id="statInactive" class="stat-value">0</div>
+          <div class="stat-help">Desativadas sem exclusão física</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Total cadastrado</div>
+          <div id="statTotal" class="stat-value">0</div>
+          <div class="stat-help">Base atual da collection cameras</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">IPs distintos</div>
+          <div id="statIps" class="stat-value">0</div>
+          <div class="stat-help">Controle básico de duplicidade</div>
+        </div>
+      </section>
+
+      <div class="card pad" style="margin-top:18px">
+        <div class="page-toolbar">
+          <div class="toolbar-left">
+            <div>
+              <div class="page-section-title">
+                <h3 style="margin:0">Parque de câmeras (<span id="cameraCount">0</span>)</h3>
+                <span class="inline-chip" id="lastSyncChip">Sincronização em tempo real</span>
+              </div>
+              <div class="subtle" style="margin-top:6px">Busca local, edição imediata e desativação lógica</div>
+            </div>
+          </div>
+
+          <div class="toolbar-right">
+            <input id="searchInput" class="input search-box" placeholder="Buscar por nome, IP ou código Helios"/>
+            <button id="btnAdd" class="btn primary">+ Nova câmera</button>
+          </div>
+        </div>
+
+        <div id="camerasList" class="camera-grid">
+          <div class="subtle">Carregando…</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal-backdrop" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nova câmera</h3>
+        <button onclick="closeModal()" class="btn">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding:20px">
+        <div class="field-grid">
+          <div style="margin:10px 0">
+            <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Nome da câmera *</label>
+            <input id="camName" class="input" placeholder="Ex: Entrada Principal" style="margin:0"/>
+          </div>
+
+          <div style="margin:10px 0">
+            <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Código Helios *</label>
+            <input id="camHelios" class="input" placeholder="Ex: CAM001" style="margin:0"/>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div style="margin:10px 0">
+            <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Endereço IP *</label>
+            <input id="camIp" class="input" placeholder="Ex: 192.168.1.100" style="margin:0"/>
+            <div class="helper-text">Padrão esperado: IPv4 válido.</div>
+          </div>
+
+          <div style="margin:10px 0">
+            <label style="font-size:11px;color:rgba(169,182,211,.9);display:block;margin-bottom:6px">Status operacional</label>
+            <label style="margin:12px 0 0 0;display:flex;gap:10px;font-size:12px;align-items:center">
+              <input id="camActive" type="checkbox" checked/>
+              <span>Câmera ativa</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="modalError" style="margin:12px 0;padding:10px 12px;border-radius:10px;background:rgba(255,59,59,.15);color:#FF9090;font-size:12px;display:none;border:1px solid rgba(255,59,59,.28)"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button onclick="closeModal()" class="btn">Cancelar</button>
+        <button id="btnSave" class="btn primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let editingId = null;
+    let unsubscribe = null;
+    let allCameras = [];
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        window.location.href = '/login.html';
+      });
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('modalError');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function clearError() {
+      const el = document.getElementById('modalError');
+      el.textContent = '';
+      el.style.display = 'none';
+    }
+
+    function normalizeCamera(cam) {
+      return {
+        id: cam.id,
+        name: cam.name || '',
+        ip_address: cam.ip_address || cam.ipAddress || '',
+        helios_code: cam.helios_code || cam.heliosCode || '',
+        is_active: cam.is_active !== false,
+        createdAt: cam.createdAt || null,
+        updatedAt: cam.updatedAt || null,
+        deletedAt: cam.deletedAt || null
+      };
+    }
+
+    function isValidIPv4(ip) {
+      const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+      return ipv4Regex.test(ip);
+    }
+
+    function updateStats(cameras) {
+      const total = cameras.length;
+      const active = cameras.filter(cam => cam.is_active).length;
+      const inactive = total - active;
+      const uniqueIps = new Set(cameras.map(cam => (cam.ip_address || '').trim()).filter(Boolean)).size;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statActive').textContent = active;
+      document.getElementById('statInactive').textContent = inactive;
+      document.getElementById('statIps').textContent = uniqueIps;
+      document.getElementById('cameraCount').textContent = total;
+    }
+
+    function getFilteredCameras() {
+      const term = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      if (!term) return allCameras;
+
+      return allCameras.filter(cam => {
+        return (
+          (cam.name || '').toLowerCase().includes(term) ||
+          (cam.ip_address || '').toLowerCase().includes(term) ||
+          (cam.helios_code || '').toLowerCase().includes(term)
+        );
+      });
+    }
+
+    function renderCameras(cameras) {
+      const list = document.getElementById('camerasList');
+      list.innerHTML = '';
+
+      if (!cameras.length) {
+        list.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <strong>Nenhuma câmera encontrada</strong>
+            <span>Revise o filtro ou cadastre um novo endpoint de captura.</span>
+          </div>
+        `;
+        return;
+      }
+
+      cameras
+        .slice()
+        .sort((a, b) => {
+          if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+          return (a.name || '').localeCompare(b.name || '', 'pt-BR');
+        })
+        .forEach(cam => {
+          const div = document.createElement('div');
+          div.className = 'camera-card';
+
+          const statusClass = cam.is_active ? 'active' : 'inactive';
+          const statusText = cam.is_active ? 'Ativa' : 'Inativa';
+
+          div.innerHTML = `
+            <div class="camera-card-header">
+              <div>
+                <h4 class="camera-title">${cam.name || '—'}</h4>
+                <p class="camera-subtitle">ID: ${cam.id}</p>
+              </div>
+              <span class="camera-status ${statusClass}">${statusText}</span>
+            </div>
+
+            <div class="camera-data">
+              <div class="data-row">
+                <div class="data-label">IP</div>
+                <div class="data-value"><span class="data-code">${cam.ip_address || '—'}</span></div>
+              </div>
+
+              <div class="data-row">
+                <div class="data-label">Helios</div>
+                <div class="data-value"><span class="data-code">${cam.helios_code || '—'}</span></div>
+              </div>
+
+              <div class="data-row">
+                <div class="data-label">Status</div>
+                <div class="data-value">${cam.is_active ? 'Disponível para ingestão' : 'Desativada logicamente'}</div>
+              </div>
+            </div>
+
+            <div class="camera-actions">
+              <button onclick="editCamera('${cam.id}')" class="btn">Editar</button>
+              <button onclick="toggleCameraStatus('${cam.id}', ${cam.is_active ? 'false' : 'true'})" class="btn ${cam.is_active ? 'danger-outline' : ''}">
+                ${cam.is_active ? 'Desativar' : 'Reativar'}
+              </button>
+            </div>
+          `;
+
+          list.appendChild(div);
+        });
+    }
+
+    function refreshView() {
+      updateStats(allCameras);
+      renderCameras(getFilteredCameras());
+    }
+
+    function openModal(id = null) {
+      clearError();
+      editingId = id;
+
+      document.getElementById('modalTitle').textContent = id ? 'Editar câmera' : 'Nova câmera';
+      document.getElementById('camName').value = '';
+      document.getElementById('camIp').value = '';
+      document.getElementById('camHelios').value = '';
+      document.getElementById('camActive').checked = true;
+      document.getElementById('modal').style.display = 'flex';
+
+      if (id) {
+        window.db.collection('cameras').doc(id).get().then(doc => {
+          if (!doc.exists) {
+            showError('Registro não encontrado.');
+            return;
+          }
+
+          const cam = normalizeCamera({ id: doc.id, ...doc.data() });
+          document.getElementById('camName').value = cam.name || '';
+          document.getElementById('camIp').value = cam.ip_address || '';
+          document.getElementById('camHelios').value = cam.helios_code || '';
+          document.getElementById('camActive').checked = cam.is_active;
+        }).catch(err => {
+          showError('Erro ao carregar câmera: ' + err.message);
+        });
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+      clearError();
+      editingId = null;
+    }
+
+    async function saveCamera() {
+      clearError();
+
+      const name = document.getElementById('camName').value.trim();
+      const ip = document.getElementById('camIp').value.trim();
+      const helios = document.getElementById('camHelios').value.trim();
+      const active = document.getElementById('camActive').checked;
+
+      if (!name) {
+        showError('Nome da câmera é obrigatório.');
+        return;
+      }
+
+      if (!ip) {
+        showError('IP é obrigatório.');
+        return;
+      }
+
+      if (!isValidIPv4(ip)) {
+        showError('IP inválido. Use um IPv4 válido, por exemplo: 192.168.1.100');
+        return;
+      }
+
+      if (!helios) {
+        showError('Código Helios é obrigatório.');
+        return;
+      }
+
+      const duplicated = allCameras.find(cam =>
+        cam.id !== editingId &&
+        (
+          cam.ip_address.trim().toLowerCase() === ip.toLowerCase() ||
+          cam.helios_code.trim().toLowerCase() === helios.toLowerCase()
+        )
+      );
+
+      if (duplicated) {
+        showError('Já existe câmera com o mesmo IP ou código Helios.');
+        return;
+      }
+
+      try {
+        const data = {
+          name,
+          ip_address: ip,
+          helios_code: helios,
+          is_active: active,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (editingId) {
+          await window.db.collection('cameras').doc(editingId).update(data);
+          console.log('[Camera] Atualizada:', editingId);
+        } else {
+          await window.db.collection('cameras').add({
+            ...data,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            deletedAt: null
+          });
+          console.log('[Camera] Criada');
+        }
+
+        closeModal();
+      } catch (e) {
+        showError('Erro ao salvar: ' + e.message);
+        console.error('[Camera] Erro:', e);
+      }
+    }
+
+    function editCamera(id) {
+      openModal(id);
+    }
+
+    async function toggleCameraStatus(id, nextStatus) {
+      const actionText = nextStatus ? 'reativar' : 'desativar';
+
+      if (!confirm(`Tem certeza que deseja ${actionText} esta câmera?`)) return;
+
+      try {
+        await window.db.collection('cameras').doc(id).update({
+          is_active: nextStatus,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deletedAt: nextStatus ? null : firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('[Camera] Status alterado:', id, nextStatus);
+      } catch (e) {
+        alert('Erro ao alterar status: ' + e.message);
+        console.error('[Camera] Erro ao alterar status:', e);
+      }
+    }
+
+    async function init() {
+      if (!window.db || !window.auth) {
+        setTimeout(init, 300);
+        return;
+      }
+
+      const user = window.auth.currentUser;
+
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      document.getElementById('userEmail').textContent = user.email;
+      document.body.style.display = 'block';
+
+      document.getElementById('btnAdd').onclick = () => openModal();
+      document.getElementById('btnSave').onclick = saveCamera;
+      document.getElementById('searchInput').addEventListener('input', refreshView);
+
+      unsubscribe = window.db.collection('cameras').onSnapshot(snap => {
+        allCameras = snap.docs.map(d => normalizeCamera({ id: d.id, ...d.data() }));
+        refreshView();
+        document.getElementById('lastSyncChip').textContent = 'Sincronização em tempo real';
+        console.log('[Cameras] Atualizado:', allCameras.length);
+      }, err => {
+        console.error('[Cameras] Erro:', err);
+        document.getElementById('camerasList').innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <strong>Falha ao carregar câmeras</strong>
+            <span>${err.message}</span>
+          </div>
+        `;
+      });
+
+      document.getElementById('connectionPill').textContent = '✓ Conectado';
+      document.getElementById('connectionPill').style.background = 'linear-gradient(135deg, rgba(34, 211, 182, 0.15), rgba(52, 211, 153, 0.1))';
+      document.getElementById('connectionPill').style.color = '#34D399';
+    }
+
+    firebase.auth().onAuthStateChanged(() => {
+      init();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (unsubscribe) unsubscribe();
+    });
+  </script>
+</body>
+</html>
