@@ -2,8 +2,8 @@
   "name": "Zecure LPR - Monitoramento de Placas",
   "short_name": "Zecure",
   "description": "Sistema de monitoramento de placas veiculares em tempo real",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./login.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#070B14",
@@ -24,3 +24,4 @@
   ]
 
 }
+
