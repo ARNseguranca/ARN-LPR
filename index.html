@@ -97,7 +97,7 @@
     async function init() {
         if (!window.db) return setTimeout(init, 500);
         const user = firebase.auth().currentUser;
-        if (!user) return location.href='/login.html';
+        if (!user) return location.href='./login.html';
         
         document.getElementById('userEmail').textContent = user.email;
         document.body.style.display = 'block';
@@ -139,4 +139,5 @@
 </body>
 
 </html>
+
 
